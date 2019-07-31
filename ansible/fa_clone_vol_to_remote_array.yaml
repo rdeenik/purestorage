@@ -1,0 +1,64 @@
+- name: Create a remote copy of a volume using it's protection group
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    fa_url_source: 10.1.1.50
+    fa_api_token_source: 0a805297-ac78-88fc-a520-7b9e70b8ef74
+    source_pg: mysql-demo
+    source_vol: vvol-mysql-b4ec20d1-vg/Data-e0e1b633
+    fa_url_dest: 10.1.1.70
+    fa_api_token_dest: 09ce30f6-7422-700c-1706-25beddd05325
+    repl_timeout: 20
+  tasks:
+  - name: "Collect information of the source Pure Storage FlashArray ({{ fa_url_source }})"
+    purefa_facts:
+      fa_url: "{{ fa_url_source }}"
+      api_token: "{{ fa_api_token_source }}"
+  - set_fact:
+      fa_host_source: "{{ ansible_facts['purefa_facts']['default']['array_name'] }}"
+  - name: "Collect information of the destination Pure Storage FlashArray ({{ fa_url_dest }})"
+    purefa_facts:
+      fa_url: "{{ fa_url_dest }}"
+      api_token: "{{ fa_api_token_dest }}"
+  - set_fact:
+      fa_host_dest: "{{ ansible_facts['purefa_facts']['default']['array_name'] }}"
+      snapshot_name: "{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
+  - debug: 
+      msg: Working with FlashArray {{ fa_host_source }} and {{ fa_host_dest }} and using snapshot name {{ snapshot_name }}
+  - name: "Create snd replicate snapshot on protection group {{ source_pg }}"
+    purefa_pgsnap:
+      name: "{{ source_pg }}"
+      suffix: "{{ snapshot_name }}"
+      state: present
+      now: true
+      remote: true
+      fa_url: "{{ fa_url_source }}"
+      api_token: "{{ fa_api_token_source }}"
+  - name: "Wait for replication to finish ({{ repl_timeout }} seconds)"
+    wait_for:
+      timeout: "{{ repl_timeout }}"
+  - name: "Create a new volume from the snapshot on {{ fa_host_dest }}"
+    purefa_pgsnap:
+      name: "{{ fa_host_source }}:{{ source_pg }}"
+      suffix: "{{ snapshot_name }}"
+      state: copy
+      restore: "{{ source_vol }}"
+      overwrite: true
+      fa_url: "{{ fa_url_dest }}"
+      api_token: "{{ fa_api_token_dest }}"
+  - name: "Remove temporary snapshot from {{ fa_host_source }}"
+    purefa_pgsnap:
+      name: "{{ source_pg }}"
+      suffix: "{{ snapshot_name }}"
+      eradicate: true
+      fa_url: "{{ fa_url_source }}"
+      api_token: "{{ fa_api_token_source }}"
+      state: absent
+  - name: "Remove temporary snapshot from {{ fa_host_dest }}"
+    purefa_pgsnap:
+      name: "{{ fa_host_source }}:{{ source_pg }}"
+      suffix: "{{ snapshot_name }}"
+      eradicate: true
+      fa_url: "{{ fa_url_dest }}"
+      api_token: "{{ fa_api_token_dest }}"
+      state: absent
