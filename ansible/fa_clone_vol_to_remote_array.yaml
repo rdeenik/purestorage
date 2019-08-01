@@ -62,6 +62,13 @@
     delay: 5
     ignore_errors: true
     until: "{{ output | json_query('ansible_facts.ansible_purefa_facts.pgroups.\"'+fa_host_source + ':' + source_pg+'\".snaps.\"'+fa_host_source + ':' + source_pg + '.' + snapshot_name+'\".progress') }} != 0.0"
+  - name: Creating volume group if required
+    purefa_vg:
+      vgroup: source_vol.split('/')[0]
+      api_token: "{{ fa_api_token_source }}"
+      fa_url: "{{ fa_url_source }}"
+      state: present
+      when: source_vol.find("/") != -1
   - name: "Restore volume from the snapshot on {{ fa_host_target }}"
     purefa_pgsnap:
       name: "{{ fa_host_source }}:{{ source_pg }}"
