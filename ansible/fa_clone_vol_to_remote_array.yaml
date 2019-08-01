@@ -62,7 +62,7 @@
     delay: 5
     ignore_errors: true
     until: "{{ output | json_query('ansible_facts.ansible_purefa_facts.pgroups.\"'+fa_host_source + ':' + source_pg+'\".snaps.\"'+fa_host_source + ':' + source_pg + '.' + snapshot_name+'\".progress') }} != 0.0"
-  - name: "Create a new volume from the snapshot on {{ fa_host_target }}"
+  - name: "Restore volume from the snapshot on {{ fa_host_target }}"
     purefa_pgsnap:
       name: "{{ fa_host_source }}:{{ source_pg }}"
       suffix: "{{ snapshot_name }}"
