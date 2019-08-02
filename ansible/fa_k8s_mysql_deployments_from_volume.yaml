@@ -3,16 +3,18 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 #
 # Description:
-# This ansible-playbook will 
-# create a volume copy on a remote array using protection groups
+# This ansible-playbook will clone an existing volume one or more time and import the
+# volume via a PersistentVolumeClaim in Kubernetes. Than is will start a MySQL deployment
+# that uses the PersistentVolumeClaim copies.
 # It assumes the following:
-# - a protection group has been created on the source array;
-# - the target FlashArray is added to the protection group.
-# The playbook will create a snapshot, which is replicated and copied to a new volume,
-# after the copy the snapshots are removed from both the source and target.
+# - the host has access to the Kubernetes environment (via ~/.kube/config)
+# The playbook will first remove any previously created deployments and/or PVC's, than
+# it will copy the source volume one or more times. Than it will import the source volume
+# into PSO and Kubernetes using a PersistentVolumeClaim and finally it will start a MySQL
+# deployment that uses the volume as MySQL data directory (/var/lib/mysql).
 #
-# Change the 'vars:' section below with the correct IP address, API token for the source/target arrays
-# and change the name of the source protectiongroup and source volume.
+# Change the 'vars:' section below with the correct IP address, API token for the FlashArray
+# and change the name of the source volume, ....
 #
 # The playbook uses jquery which requires jmespath, make sure these are installed
 # use 'pip install jmespath' to install. This playbook requires Ansible version 2.9 to run.
