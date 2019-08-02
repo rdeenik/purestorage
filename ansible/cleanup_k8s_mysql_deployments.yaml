@@ -1,0 +1,31 @@
+---
+# (c) 2019, Remko Deenik (rdeenik@purestorage.com)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+#
+- name: Clean up Kubernetes after deployments demo
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    fa_url: 10.1.1.70                                           # IP address or URL for FlashArray
+    fa_api_token: 09ce30f6-7422-700c-1706-25beddd05325          # API token used for source FlashArray
+    source_vol: vvol-mysql-b4ec20d1-vg/Data-e0e1b633            # Volume name to import
+    deployment_prefix: mysql
+    num_of_deployments: 5
+    namespace: accelerate
+  tasks:
+  - name: Remove existing Kubernetes deployments
+    k8s:
+      state: absent
+      api_version: v1
+      kind: Deployment
+      namespace: "{{ namespace }}"
+      name: "{{ deployment_prefix + '-' + item }}"
+    with_sequence: start=1 end={{ num_of_deployments }} format={{ '%02x'}}
+  - name: Remove an existing Kubernetes PersistentVolumeClaims
+    k8s:
+      state: absent
+      api_version: v1
+      kind: PersistentVolumeClaim
+      namespace: "{{ namespace }}"
+      name: "{{ deployment_prefix + '-volume-' + item }}"
+    with_sequence: start=1 end={{ num_of_deployments }} format={{ '%02x'}}
