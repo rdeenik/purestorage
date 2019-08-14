@@ -6,12 +6,12 @@
   hosts: localhost
   gather_facts: yes
   vars:
-    fa_url: 172.39.1.1                                           # IP address or URL for FlashArray
+    fa_url: 172.39.1.1                                          # IP address or URL for FlashArray
     fa_api_token: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx          # API token used for source FlashArray
     source_vol: volume-group-name/volume-name                   # Volume name to import (the volume group is optional)
     deployment_prefix: mysql
     num_of_deployments: 5
-    namespace: accelerate
+    namespace: purestorage
   tasks:
   - name: Remove existing Kubernetes deployments
     k8s:

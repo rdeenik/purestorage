@@ -22,8 +22,8 @@
   vars:
     fa_url_source: 10.10.1.1                                    # IP address of URL to source Cloud Block Storage/FlashArray
     fa_api_token_source: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # API token used for source Cloud Block Storage/FlashArray
-    source_pg: mysqldemo                                        # Protection group name
-    source_vol: vvol-mysql-b4ec20d1-vg/Data-e0e1b633            # Volume name
+    source_pg: protection-group-name                            # Protection group name
+    source_vol: volume-group-name/volume-name                   # Volume name
     fa_url_target: 172.39.1.1                                   # IP address of URL to target Cloud Block Storage/FlashArray
     fa_api_token_target: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # API token used for target Cloud Block Storage/FlashArray
   tasks:
