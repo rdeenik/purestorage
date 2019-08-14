@@ -3,18 +3,16 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 #
 # Description:
-# This ansible-playbook will clone an existing volume one or more time and import the
-# volume via a PersistentVolumeClaim in Kubernetes. Than is will start a MySQL deployment
-# that uses the PersistentVolumeClaim copies.
+# This ansible-playbook will 
+# create a volume copy on a remote array using protection groups
 # It assumes the following:
-# - the host has access to the Kubernetes environment (via ~/.kube/config)
-# The playbook will first remove any previously created deployments and/or PVC's, than
-# it will copy the source volume one or more times. Than it will import the source volume
-# into PSO and Kubernetes using a PersistentVolumeClaim and finally it will start a MySQL
-# deployment that uses the volume as MySQL data directory (/var/lib/mysql).
+# - a protection group has been created on the source array;
+# - the target FlashArray is added to the protection group.
+# The playbook will create a snapshot, which is replicated and copied to a new volume,
+# after the copy the snapshots are removed from both the source and target.
 #
-# Change the 'vars:' section below with the correct IP address, API token for the FlashArray
-# and change the name of the source volume, ....
+# Change the 'vars:' section below with the correct IP address, API token for the source/target arrays
+# and change the name of the source protectiongroup and source volume.
 #
 # The playbook uses jquery which requires jmespath, make sure these are installed
 # use 'pip install jmespath' to install. This playbook requires Ansible version 2.9 to run.
@@ -23,12 +21,12 @@
   hosts: localhost
   gather_facts: yes
   vars:
-    fa_url: 10.1.1.70                                           # IP address or URL for FlashArray
-    fa_api_token: 09ce30f6-7422-700c-1706-25beddd05325          # API token used for source FlashArray
-    source_vol: vvol-mysql-b4ec20d1-vg/Data-e0e1b633            # Volume name to import
+    fa_url: 172.39.1.1                                           # IP address or URL for FlashArray
+    fa_api_token: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx          # API token used for source FlashArray
+    source_vol: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx            # Volume name to import
     deployment_prefix: mysql
     num_of_deployments: 5
-    namespace: accelerate
+    namespace: purestorage
   tasks:
   - name: Get source volume information
     purefa_facts:
@@ -39,33 +37,19 @@
   - set_fact:
       volume_size: "{{ output | json_query('ansible_facts.ansible_purefa_facts.volumes.\"' + source_vol + '\".size')/1073741824 }}"
       temp_vol_name: "{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
-  - name: Remove existing Kubernetes deployments
-    k8s:
-      state: absent
-      api_version: v1
-      kind: Deployment
-      namespace: "{{ namespace }}"
-      name: "{{ deployment_prefix + '-' + item }}"
-    with_sequence: start=1 end={{ num_of_deployments }} format={{ '%02x'}}
-  - name: Remove an existing Kubernetes PersistentVolumeClaims
-    k8s:
-      state: absent
-      api_version: v1
-      kind: PersistentVolumeClaim
-      namespace: "{{ namespace }}"
-      name: "{{ deployment_prefix + '-volume-' + item }}"
-    with_sequence: start=1 end={{ num_of_deployments }} format={{ '%02x'}}
   - name: Clone the source volume for use within Kubernetes
     purefa_volume:
       name: "{{ source_vol }}"
       target: "{{ temp_vol_name + '-' + item }}"
       fa_url: "{{ fa_url }}"
       api_token: "{{ fa_api_token }}"
+      overwrite: yes
       state: present
     with_sequence: start=1 end={{ num_of_deployments }} format={{ '%02x'}}
   - name: Import volume clone in Kubernetes using a PersistentVolumeClaim
     k8s:
       state: present
+      force: yes
       definition:
         apiVersion: v1
         kind: PersistentVolumeClaim
@@ -85,6 +69,7 @@
   - name: Create a Kubernetes deployment using the PersistentVolumeClaim
     k8s:
       state: present
+      force: yes
       definition:
         apiVersion: apps/v1
         kind: Deployment

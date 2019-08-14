@@ -20,12 +20,12 @@
   hosts: localhost
   gather_facts: yes
   vars:
-    fa_url_source: 10.1.1.50                                    # IP address of URL to source FlashArray
-    fa_api_token_source: 0a805297-ac78-88fc-a520-7b9e70b8ef74   # API token used for source FlashArray
+    fa_url_source: 10.10.1.1                                    # IP address of URL to source Cloud Block Storage/FlashArray
+    fa_api_token_source: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # API token used for source Cloud Block Storage/FlashArray
     source_pg: mysqldemo                                        # Protection group name
     source_vol: vvol-mysql-b4ec20d1-vg/Data-e0e1b633            # Volume name
-    fa_url_target: 10.1.1.70                                    # IP address of URL to target FlashArray
-    fa_api_token_target: 09ce30f6-7422-700c-1706-25beddd05325   # API token used for target FlashArray
+    fa_url_target: 172.39.1.1                                   # IP address of URL to target Cloud Block Storage/FlashArray
+    fa_api_token_target: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # API token used for target Cloud Block Storage/FlashArray
   tasks:
   - name: "Collect information of the source Pure Storage FlashArray ({{ fa_url_source }})"
     purefa_facts:
@@ -62,7 +62,8 @@
     retries: 10
     delay: 5
     ignore_errors: true
-    until: "{{ output | json_query('ansible_facts.ansible_purefa_facts.pgroups.\"'+fa_host_source + ':' + source_pg+'\".snaps.\"'+fa_host_source + ':' + source_pg + '.' + snapshot_name+'\".progress') }} != 0.0"
+    #until: "{{ output | json_query('ansible_facts.ansible_purefa_facts.pgroups.\"'+fa_host_source + ':' + source_pg+'\".snaps.\"'+fa_host_source + ':' + source_pg + '.' + snapshot_name+'\".progress') }} != 0.0"
+    until: "output | json_query('ansible_facts.ansible_purefa_facts.pgroups.\"'+fa_host_source + ':' + source_pg+'\".snaps.\"'+fa_host_source + ':' + source_pg + '.' + snapshot_name+'\".progress') != 0.0"
   - name: "Creating volume group if required"
     purefa_vg:
       vgroup: "{{ source_vol.split('/')[0] }}"
