@@ -6,9 +6,9 @@
   hosts: localhost
   gather_facts: yes
   vars:
-    fa_url: 10.1.1.70                                           # IP address or URL for FlashArray
-    fa_api_token: 09ce30f6-7422-700c-1706-25beddd05325          # API token used for source FlashArray
-    source_vol: vvol-mysql-b4ec20d1-vg/Data-e0e1b633            # Volume name to import
+    fa_url: 172.39.1.1                                           # IP address or URL for FlashArray
+    fa_api_token: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx          # API token used for source FlashArray
+    source_vol: volume-group-name/volume-name                   # Volume name to import (the volume group is optional)
     deployment_prefix: mysql
     num_of_deployments: 5
     namespace: accelerate
