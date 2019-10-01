@@ -66,7 +66,7 @@ resource "vsphere_virtual_machine" "k8s-adminnode" {
     path             = "${var.k8s-adminnode.iso_location}"
   }
   
-  wait_for_guest_net_timeout = 60
+  wait_for_guest_net_timeout = 120
 }
 
 resource "vsphere_virtual_machine" "k8s-nodes" {
@@ -98,7 +98,7 @@ resource "vsphere_virtual_machine" "k8s-nodes" {
   }
 
   # Allow ten minutes for the deployment and installation of the VMs
-  wait_for_guest_net_timeout = 10
+  wait_for_guest_net_timeout = 120
 }
 
 resource "null_resource" "nodes" {
@@ -121,7 +121,7 @@ resource "null_resource" "nodes" {
     source          = "${var.k8s-adminnode.public_key}"
     destination     = "/tmp/id_rsa.pub"
   }
-  
+
   provisioner "remote-exec" {
     inline = [
       "mkdir -p /root/.ssh/",
