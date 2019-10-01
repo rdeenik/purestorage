@@ -96,4 +96,3 @@
       fa_url: "{{ fa_url_target }}"
       api_token: "{{ fa_api_token_target }}"
       state: absent
-

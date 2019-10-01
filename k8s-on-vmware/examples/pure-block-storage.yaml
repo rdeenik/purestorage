@@ -1,0 +1,13 @@
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+    # This will provision a block storage volume using PSO
+    name: pure-block-storage
+spec:
+     accessModes:
+       - ReadWriteOnce
+     resources:
+       requests:
+         storage: 10Gi
+     storageClassName: pure-block

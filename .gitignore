@@ -1,2 +1,9 @@
 
 .DS_Store
+*.tfvars
+*.tfstate
+*.backup
+.terraform
+todo.txt
+.terraform.tfstate.lock.info
+ubuntu/ubuntu-iso.tf
