@@ -112,7 +112,7 @@ resource "null_resource" "nodes" {
     type = "ssh"
     host = "${vsphere_virtual_machine.k8s-nodes[count.index].default_ip_address}"
     user = "root"
-    private_key = "${file("/Users/rdeenik/.ssh/id_rsa-k8s-on-vmware")}"
+    password = "password"
     port = "22"
     agent = false
   }
@@ -152,7 +152,7 @@ resource "null_resource" "adminnode" {
     type = "ssh"
     host = "${vsphere_virtual_machine.k8s-adminnode.default_ip_address}"
     user = "root"
-    private_key = "${file("/Users/rdeenik/.ssh/id_rsa-k8s-on-vmware")}"
+    password = "password"
     port = "22"
     agent = false
   }
@@ -214,7 +214,7 @@ resource "null_resource" "k8s-config" {
     type = "ssh"
     host = "${vsphere_virtual_machine.k8s-adminnode.default_ip_address}"
     user = "root"
-    private_key = "${file("/Users/rdeenik/.ssh/id_rsa-k8s-on-vmware")}"
+    private_key = "${file("~/.ssh/id_rsa-k8s-on-vmware")}"
     port = "22"
     agent = false
   }
