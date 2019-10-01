@@ -5,14 +5,14 @@ Ubuntu unattended install CD
 
 ## Installation
 
-**Download<<br>
+**Download**<br/>
 git clone https://github.com/dnix101/purestorage.git
 cd purestorage/k8s-on-vmware/
 
-**Configure<<br>
+**Configure**<br/>
 vi variables.tf
 
-**Deploy<<br>
+**Deploy**<br/>
 terraform init
 terraform plan
 terraform apply
