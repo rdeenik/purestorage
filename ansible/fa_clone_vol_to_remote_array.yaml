@@ -45,7 +45,7 @@
   - debug: 
       msg: 
       - "Working with FlashArray {{ fa_host_source }} and {{ fa_host_target }} and using snapshot name {{ snapshot_name }}"
-  - name: "Create snd replicate snapshot on protection group {{ source_pg }}"
+  - name: "Create and replicate snapshot on protection group {{ source_pg }}"
     purefa_pgsnap:
       name: "{{ source_pg }}"
       suffix: "{{ snapshot_name }}"
