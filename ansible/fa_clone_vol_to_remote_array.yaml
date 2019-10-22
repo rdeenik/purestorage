@@ -28,17 +28,19 @@
     fa_api_token_target: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # API token used for target Cloud Block Storage/FlashArray
   tasks:
   - name: "Collect information of the source Pure Storage FlashArray ({{ fa_url_source }})"
-    purefa_facts:
+    purefa_info:
       fa_url: "{{ fa_url_source }}"
       api_token: "{{ fa_api_token_source }}"
+    register: array_info
   - set_fact:
-      fa_host_source: "{{ ansible_facts['purefa_facts']['default']['array_name'] }}"
+      fa_host_source: "{{ array_info['purefa_info']['default']['array_name'] }}"
   - name: "Collect information of the target Pure Storage FlashArray ({{ fa_url_target }})"
-    purefa_facts:
+    purefa_info:
       fa_url: "{{ fa_url_target }}"
       api_token: "{{ fa_api_token_target }}"
+    register: array_info
   - set_fact:
-      fa_host_target: "{{ ansible_facts['purefa_facts']['default']['array_name'] }}"
+      fa_host_target: "{{ array_info['purefa_info']['default']['array_name'] }}"
       snapshot_name: "{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
   - debug: 
       msg: 
@@ -54,16 +56,15 @@
       fa_url: "{{ fa_url_source }}"
       api_token: "{{ fa_api_token_source }}"
   - name: Wait until PG transfer is complete
-    purefa_facts:
+    purefa_info:
       gather_subset: pgroups
       api_token: "{{ fa_api_token_target }}"
       fa_url: "{{ fa_url_target }}"
-    register: output
+    register: array_info
     retries: 10
     delay: 5
     ignore_errors: true
-    #until: "{{ output | json_query('ansible_facts.ansible_purefa_facts.pgroups.\"'+fa_host_source + ':' + source_pg+'\".snaps.\"'+fa_host_source + ':' + source_pg + '.' + snapshot_name+'\".progress') }} != 0.0"
-    until: "output | json_query('ansible_facts.ansible_purefa_facts.pgroups.\"'+fa_host_source + ':' + source_pg+'\".snaps.\"'+fa_host_source + ':' + source_pg + '.' + snapshot_name+'\".progress') != 0.0"
+    until: "array_info | json_query('purefa_info.pgroups.\"' + fa_host_source + ':' + source_pg + '\".snaps.\"' + fa_host_source + ':' + source_pg + '.' + snapshot_name + '\".progress') != 0.0"
   - name: "Creating volume group if required"
     purefa_vg:
       vgroup: "{{ source_vol.split('/')[0] }}"
