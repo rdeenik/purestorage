@@ -1,0 +1,66 @@
+---
+# (c) 2019, Remko Deenik (rdeenik@purestorage.com)
+# BSD 2-Clause License
+#
+# Description:
+# This ansible-playbook will add PSO volumes for a specific namespace to a protection
+# group (pg). If the volume is prefixed with the PSO namespace it will be added to the
+# pg. Optionally, if you set create_snap to true in the variables section it will 
+# create a snapshot and replicate that snapshot directly after adding the volumes. This
+# snapshot will only be created if a volume was added to the pg.
+#
+# The playbook assumes the following:
+# - a protection group has been created on the array;
+# - if replication is required the target array has been added to the pg (optional).
+#
+# How to use:
+# Change the 'vars:' section below with the correct IP  address or hostname and
+# the correct API token for the arrays. Also change the name of the protectiongroup and 
+# if you wish to snap/repication volumes directly after they have been added set 
+# create_snap to true (otherwise set it to false).
+#
+# System requirements:
+# The playbook uses jquery which requires jmespath, make sure these are installed
+# use 'pip install jmespath' to install. This playbook requires Ansible version 2.9 to run.
+#
+- name: Add PSO volumes to a protection group
+  hosts: localhost
+  gather_facts: no
+  vars:
+    # IP address of URL to source Cloud Block Storage/FlashArray
+    fa_url: 10.1.1.50
+    # API token used for source Cloud Block Storage/FlashArray
+    fa_api_token: 0a805297-ac78-88fc-a520-7b9e70b8ef74
+    # The namespace specified for PSO in the values.yaml file for the backend storage namespace 
+    namespace:
+      pure: psodemo
+    # The protection group to add the volumes to
+    protectiongroup: pso-volumes
+    create_snap: true
+  tasks:
+  - name: Get list of volumes on the array
+    purefa_info:
+      gather_subset: volumes
+      fa_url: "{{ fa_url }}"
+      api_token: "{{ fa_api_token }}"
+    register: volumes
+  - name: Add volumes to protection group
+    purefa_pg:
+      pgroup: "{{ protectiongroup }}"
+      volume: "{{ item }}"
+      fa_url: "{{ fa_url }}"
+      api_token: "{{ fa_api_token }}"
+    when: item is match(namespace.pure)
+    loop: "{{ volumes | json_query('purefa_info.volumes.keys(@)') }}"
+    register: volumes_added
+  # The following task is optional an will create a snapshot for the protection group. Please 
+  # note if you include this, a snapshot will be created each time the playbook is run however,
+  # since we use apply_retention the snapshot will follow the retention policy of the pg.
+  - name: Create a snapshot and replicate changes
+    purefa_pgsnap:
+      name: "{{ protectiongroup }}"
+      remote: yes                                   # This requires ansible 2.9
+      apply_retention: yes                          # This requires ansible 2.9
+      fa_url: "{{ fa_url }}"
+      api_token: "{{ fa_api_token }}" 
+    when: create_snap and volumes_added.changed
