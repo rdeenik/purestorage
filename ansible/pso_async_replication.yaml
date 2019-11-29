@@ -28,9 +28,9 @@
   gather_facts: no
   vars:
     # IP address of URL to source Cloud Block Storage/FlashArray
-    fa_url: 10.1.1.50
+    fa_url: 10.10.1.1
     # API token used for source Cloud Block Storage/FlashArray
-    fa_api_token: 0a805297-ac78-88fc-a520-7b9e70b8ef74
+    fa_api_token: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     # The namespace specified for PSO in the values.yaml file for the backend storage namespace 
     namespace:
       pure: psodemo
