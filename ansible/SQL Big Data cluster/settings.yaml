@@ -1,0 +1,27 @@
+---
+# Variables shared between three Ansible playbooks:
+# - backup-script.yaml
+# - restore-script.yaml
+# - remove-backup-script.yaml
+#
+
+# The namespace.pure variable specified in values.yaml during the installation of PSO
+pso_namespace: "k8s"
+
+# The Kubernetes namespace to backup/restore
+k8s_namespace: "remko"
+#k8s_namespace: "mssql-cluster"
+
+# FlashArray/Cloud Block Store authentication details
+fa_url: "10.225.112.12"
+fa_apitoken: "b1edecae-0cfa-d3d5-72dc-7506f4013f50"
+
+# Labels to identify the application (one or more StatefulSets)
+cluster_labels: "app=nginx"
+#cluster_labels: "MSSQL_CLUSTER=mssql-cluster"
+
+# Name of the snapshot to create (temporarily) during the backup
+snapshot_name: "remko"
+
+# Prefix of the backup volumes used for the backup/restore or the original PVC's
+volcopy_prefix: "remko-bck"

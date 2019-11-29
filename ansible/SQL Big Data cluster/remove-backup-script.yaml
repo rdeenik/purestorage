@@ -1,0 +1,57 @@
+---
+# (c) 2019, Remko Deenik (rdeenik@purestorage.com)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+#
+# Description:
+# This ansible-playbook was designed to provide a way to backup and restore a Microsoft SQL
+# Server 2019 Big Data cluster environment. The backup script  will create a snapshot for 
+# all PVC's that belong to the cluster (based on the cluster name labels) and clone a backup
+# volume from that snapshot. The restore script can be used after a new cluster was 
+# deployed. It will scale down the StatefulSets of the cluster, copy the backup volume to
+# the new PVC, overwriting the contents. Then it will scale the StatefulSets back to the
+# original replica counts.
+#
+# It assumes the following:
+# - the settings.yaml file contains the correct config settings;
+# - all volumes are labels with the label specified as "cluster_labels" in settings.yaml;
+#
+# Change the 'settings.yaml' file included with this playbook, with the correct IP address,
+# API token for the arrays, PSO namespace, k8s namespace, etc.
+#
+# The playbook uses jquery which requires jmespath, make sure these are installed
+# use 'pip install jmespath' to install. This playbook requires Ansible version 2.9 to run.
+#
+
+- name: Deleting previously created backup volume for Microsoft SQL Big Data Cluster
+  hosts: localhost
+  gather_facts: no
+  tasks:
+
+  - name: Load settings
+    include_vars: settings.yaml
+
+  - name: Get list of PVC's for Microsoft SQL Big Data Cluster
+    k8s_info:
+      kind: PersistentVolumeClaim
+      namespace: "{{ k8s_namespace }}"
+      label_selectors: "{{ cluster_labels }}" 
+    register: list_pvc
+
+  - name: Delete backup volumes
+    debug:
+      msg: "{{ volcopy_prefix + '-' + list_pvc | json_query('resources[' + ansible_loop.index0 | string + '].metadata.name') }}"
+    with_sequence: count="{{ list_pvc | json_query('resources') | count }}"
+    loop_control:
+      extended: yes
+
+  - name: Delete backup volumes 
+    purefa_volume:
+      fa_url: "{{ fa_url }}"
+      api_token: "{{ fa_apitoken }}"
+      name: "{{ volcopy_prefix + '-' + list_pvc | json_query('resources[' + ansible_loop.index0 | string + '].metadata.name') }}"
+      state: absent
+      eradicate: yes
+    with_sequence: count="{{ list_pvc | json_query('resources') | count }}"
+    loop_control:
+      extended: yes
+
