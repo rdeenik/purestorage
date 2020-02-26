@@ -1,0 +1,46 @@
+---
+# (c) 2019, Remko Deenik (rdeenik@purestorage.com)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+#
+# Description:
+# This ansible-playbook will 
+# create a volume copy on a remote array using protection groups
+# It assumes the following:
+# - a protection group has been created on the source array;
+# - the target FlashArray is added to the protection group.
+# The playbook will create a snapshot, which is replicated and copied to a new volume,
+# after the copy the snapshots are removed from both the source and target.
+#
+# Change the 'vars:' section below with the correct IP address, API token for the source/target arrays
+# and change the name of the source protectiongroup and source volume.
+#
+# The playbook uses jquery which requires jmespath, make sure these are installed
+# use 'pip install jmespath' to install. This playbook requires Ansible version 2.9 to run.
+#
+- name: Import a volume in Kubernetes as a PVC
+  hosts: localhost
+  gather_facts: no
+  vars:
+    # IP address of URL to source Cloud Block Storage/FlashArray
+    fa_url_source: 10.1.1.50
+    # API token used for source Cloud Block Storage/FlashArray
+    fa_api_token_source: 0a805297-ac78-88fc-a520-7b9e70b8ef74
+    # Volume name
+    statefulset: wordpress
+    # IP address of URL to target Cloud Block Storage/FlashArray
+    fa_url_target: 10.1.1.70
+    # API token used for target Cloud Block Storage/FlashArray
+    fa_api_token_target: 09ce30f6-7422-700c-1706-25beddd05325
+
+  tasks:
+  - name: Get a list of all pods from any namespace
+    k8s_facts:
+      kind: StatefulSet
+    register: my_set
+  - debug:
+      var: my_set
+
+  #- name: Fetch all deployments in a namespace
+  #  k8s:
+  #  set_fact:
+  #    deployments: "{{ lookup('k8s', kind='StatefulSet', namespace='default') }}"

@@ -37,6 +37,44 @@
       label_selectors: "{{ cluster_labels }}" 
     register: list_pvc
 
+  - name: Get StatefulSets
+    k8s_info:
+      kind: StatefulSet
+      namespace: "{{ k8s_namespace }}"
+      label_selectors: "{{ cluster_labels }}"
+    register: list_statefulsets
+
+  - name: Save current StatefulSets replica count
+    set_fact:
+      replicas: "{{replicas|default({}) | combine({list_statefulsets | json_query('resources[' + ansible_loop.index0 | string + '].metadata.name'): list_statefulsets | json_query('resources[' + ansible_loop.index0 | string + '].spec.replicas')})}}"
+    with_sequence: count="{{ list_statefulsets | json_query('resources') | count }}"
+    loop_control:
+      extended: yes
+
+  - name: Scale down StatefulSets relicas to 0
+    k8s:
+      name: "{{ list_statefulsets | json_query('resources[' + ansible_loop.index0 | string + '].metadata.name') }}"
+      namespace: "{{ k8s_namespace }}"
+      state: present
+      definition:
+        apiVersion: apps/v1
+        kind: StatefulSet
+        spec:
+          replicas: 0
+    with_sequence: count="{{ list_statefulsets | json_query('resources') | count }}"
+    loop_control:
+      extended: yes
+
+  - name: Wait for containers to stop
+    k8s_info:
+      kind: pod
+      namespace: "{{ k8s_namespace }}"
+      label_selectors: "{{ cluster_labels }}"
+    register: list_pods
+    until: "(list_pods | json_query('resources') | count) == 0"
+    retries: 20
+    delay: 5
+
   - name: Create (temporary) snapshot for each PVC
     purefa_snap:
       fa_url: "{{ fa_url }}"
@@ -73,3 +111,16 @@
     loop_control:
       extended: yes
 
+  - name: Scale up StatefulSets to orginisal relica count
+    k8s:
+      api_version: "apps/v1"
+      kind: "StatefulSet"
+      name: "{{ item.key }}"
+      namespace: "{{ k8s_namespace }}"
+      definition:
+        spec:
+          replicas: "{{ item.value }}"
+      wait: yes
+    with_dict: "{{ replicas }}"
+    loop_control:
+      extended: yes
