@@ -218,7 +218,10 @@ resource "null_resource" "kubespray" {
       "cd ~/",
       "~/run-kubespray.sh",
       "mkdir .kube",
-      "scp -oStrictHostKeyChecking=no ${vsphere_virtual_machine.k8snodes[0].default_ip_address}:/etc/kubernetes/admin.conf .kube/config"
+      "ssh -oStrictHostKeyChecking=no ${vsphere_virtual_machine.k8snodes[0].default_ip_address} sudo cp /etc/kubernetes/admin.conf ~/config",
+      "ssh -oStrictHostKeyChecking=no ${vsphere_virtual_machine.k8snodes[0].default_ip_address} sudo chown ${var.k8s-global.username}:${var.k8s-global.username} ~/config",
+      "scp -oStrictHostKeyChecking=no ${vsphere_virtual_machine.k8snodes[0].default_ip_address}:~/config .kube/config",
+      "ssh -oStrictHostKeyChecking=no ${vsphere_virtual_machine.k8snodes[0].default_ip_address} rm ~/config",
     ]
   }
   depends_on = [
