@@ -1,4 +1,3 @@
-
 .DS_Store
 *.tfvars
 *.tfstate
@@ -6,4 +5,5 @@
 .terraform
 todo.txt
 .terraform.tfstate.lock.info
-ubuntu/ubuntu-iso.tf
+Do not sync/
+k8s-on-vmware/keys

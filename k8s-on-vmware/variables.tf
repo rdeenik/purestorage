@@ -1,36 +1,49 @@
+# Generic vSphere config variables
 variable "vsphere_config" {
-    type                        = "map"
+    type                        = map(string)
     description                 = "vSphere environment and connection details"
 
     default = {
-        user            = "administrator@vsphere.local"
-        password        = ""
-        vcenter_url     = "localhost"
-        datacenter      = "datacenter"
-        resourcepool    = "Cluster/Resources"
-        datastore       = "datastore1"
-        vm_network      = "VM Network"
-        iscsi_network   = "iSCSI"
+        user                    = "administrator@vsphere.local"
+        password                = ""
+        vcenter_server          = ""
+        datacenter              = "datacenter"
+        cluster                 = "cluster"
+        datastore               = "datastore1"
+        vm_network              = "VM Network"
+        iscsi_network           = "iSCSI"
     }
 }
 
-variable "k8s-adminnode" {
-    type                        = "map"
+# Global K8S cluster parameters
+variable "k8s-global" {
+    type                        = map(string)
+    description                 = "Global settings for the k8s cluster"
+
+    default = {
+        username                = "k8sadmin"
+        private_key             = "keys/id_rsa-k8s-on-vmware"
+        public_key              = "keys/id_rsa-k8s-on-vmware.pub"
+    }
+}
+
+# Admin node config parameters
+variable "k8s-adminhost" {
+    type                        = map(string)
     description                 = "Details for the k8s administrative node"
 
     default = {
-        hostname                = "k8s-adminnode"
+        hostname                = "k8s-adminhost"
         num_cpus                = "2"
         memory                  = "1024"
         disk_size               = "20"
-        iso_location            = "iso/ubuntu-18.04-netboot-amd64-unattended.iso"
-        private_key             = "~/.ssh/id_rsa-k8s-on-vmware"
-        public_key              = "~/.ssh/id_rsa-k8s-on-vmware.pub"
+        template                = "ubuntu-bionic-18.04-cloudimg"
     }
 }
 
-variable "k8s-nodes" {
-    type                        = "map"
+# K8S node config parameters
+variable "k8snodes" {
+    type                        = map(string)
     description                 = "Details for the k8s worker nodes"
 
     default = {
@@ -39,9 +52,9 @@ variable "k8s-nodes" {
         num_cpus                = "2"
         memory                  = "2048"
         disk_size               = "20"
-        iso_location            = "iso/ubuntu-18.04-netboot-amd64-unattended.iso"
-        iscsi_subnet            = "172.16.1."
-        iscsi_startip           = "11"
+        template                = "ubuntu-bionic-18.04-cloudimg"
+        iscsi_subnet            = "172.16.10."
+        iscsi_startip           = "101"
         iscsi_maskbits          = "24"
     }
 }
