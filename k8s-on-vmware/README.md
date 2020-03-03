@@ -1,7 +1,7 @@
 # Welcome to this Kubernetes-on-VMware project.
 
 ## Requirements
-Ubuntu unattended install CD
+Ubuntu ova template, tested with 18.04 (https://cloud-images.ubuntu.com/)
 
 ## Installation
 
