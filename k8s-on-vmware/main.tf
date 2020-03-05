@@ -12,10 +12,11 @@
 
 # Generate a public/private key for passwordless authentication
 resource "null_resource" "generate-sshkey" {
-    # TODO: create directory
     # TODO: only run if keys do not exist
     provisioner "local-exec" {
         command = "sh -c mkdir keys"
+    }
+    provisioner "local-exec" {
         command = "yes y | ssh-keygen -b 4096 -t rsa -C 'k8s-on-vmware-sshkey' -N '' -f ${var.k8s-global.private_key}"
     }
 }
@@ -209,6 +210,15 @@ resource "null_resource" "kubespray" {
 
   provisioner "remote-exec" {
     inline = [
+      "pip3 install --upgrade pip",
+      "cd /home/${username}/",
+      "curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl",
+      "chmod +x kubectl",
+      "mv kubectl /usr/local/bin/",
+      "git clone https://github.com/kubernetes-sigs/kubespray.git",
+      "chown -R ${username}:${username} kubespray",
+      "cd kubespray",
+      "pip install -r requirements.txt",
       "cd ~/kubespray",
       "cp -rfp inventory/sample inventory/k8s-on-vmware",
       "echo ${join(" ", vsphere_virtual_machine.k8snodes.*.default_ip_address)} >/tmp/ips",
