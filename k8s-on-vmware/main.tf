@@ -228,4 +228,5 @@ resource "null_resource" "kubespray" {
     vsphere_virtual_machine.k8s-adminhost,
     vsphere_virtual_machine.k8snodes,
     null_resource.set-public-key,
+  ]
 }
