@@ -12,7 +12,10 @@
 
 # Generate a public/private key for passwordless authentication
 resource "null_resource" "generate-sshkey" {
+    # TODO: create directory
+    # TODO: only run if keys do not exist
     provisioner "local-exec" {
+        command = "sh -c mkdir keys"
         command = "yes y | ssh-keygen -b 4096 -t rsa -C 'k8s-on-vmware-sshkey' -N '' -f ${var.k8s-global.private_key}"
     }
 }
