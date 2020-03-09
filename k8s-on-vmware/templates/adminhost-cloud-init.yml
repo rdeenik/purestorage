@@ -15,4 +15,6 @@ packages:
   - vim
   - net-tools
   - python3-pip
-  - sh -c "touch /etc/cloud/cloud-init.done"
+
+runcmd:
+  - touch /etc/cloud/cloud-init.done
