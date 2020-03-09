@@ -33,3 +33,4 @@ write_files:
 # Activate network changes
 runcmd:
   - netplan apply
+  - [ sh, -c, "echo 'InitiatorName=iqn.1993-08.org.debian:${hostname}' > /etc/iscsi/initiatorname.iscsi" ]

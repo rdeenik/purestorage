@@ -12,11 +12,12 @@
 
 # Generate a public/private key for passwordless authentication
 resource "null_resource" "generate-sshkey" {
-    # TODO: only run if keys do not exist
     provisioner "local-exec" {
-        command = "sh -c mkdir keys"
+        # TODO only if directory does not exist
+        command = "mkdir keys"
     }
     provisioner "local-exec" {
+        # TODO: only run if keys do not exist
         command = "yes y | ssh-keygen -b 4096 -t rsa -C 'k8s-on-vmware-sshkey' -N '' -f ${var.k8s-global.private_key}"
     }
 }
@@ -157,7 +158,7 @@ resource "vsphere_virtual_machine" "k8snodes" {
   vapp {
     properties = {
       hostname          = "${var.k8snodes.hostname}${count.index + 1}"
-      user-data         = base64encode(templatefile("templates/k8snodes-cloud-init.yml", { username = var.k8s-global.username, public-key = data.local_file.ssh-publickey.content, iscsi-ip-addr = "[${var.k8snodes.iscsi_subnet}${var.k8snodes.iscsi_startip + count.index}/${var.k8snodes.iscsi_maskbits}]" }))
+      user-data         = base64encode(templatefile("templates/k8snodes-cloud-init.yml", { username = var.k8s-global.username, public-key = data.local_file.ssh-publickey.content, iscsi-ip-addr = "[${var.k8snodes.iscsi_subnet}${var.k8snodes.iscsi_startip + count.index}/${var.k8snodes.iscsi_maskbits}]", hostname=this.name }))
     }
   }
 
@@ -171,6 +172,7 @@ resource "vsphere_virtual_machine" "k8snodes" {
     data.local_file.ssh-publickey,
   ]
 }
+
 
 # Copy private/public keys for passwordless authentication to adminhost
 resource "null_resource" "set-public-key" {
@@ -211,15 +213,12 @@ resource "null_resource" "kubespray" {
   provisioner "remote-exec" {
     inline = [
       "pip3 install --upgrade pip",
-      "cd /home/${username}/",
       "curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl",
       "chmod +x kubectl",
-      "mv kubectl /usr/local/bin/",
+      "sudo mv kubectl /usr/local/bin/",
       "git clone https://github.com/kubernetes-sigs/kubespray.git",
-      "chown -R ${username}:${username} kubespray",
-      "cd kubespray",
-      "pip install -r requirements.txt",
       "cd ~/kubespray",
+      "pip install -r requirements.txt",
       "cp -rfp inventory/sample inventory/k8s-on-vmware",
       "echo ${join(" ", vsphere_virtual_machine.k8snodes.*.default_ip_address)} >/tmp/ips",
       "echo \"#!/bin/bash\" > ~/run-kubespray.sh",
