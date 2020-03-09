@@ -13,8 +13,7 @@
 # Generate a public/private key for passwordless authentication
 resource "null_resource" "generate-sshkey" {
     provisioner "local-exec" {
-        # TODO only if directory does not exist
-        command = "mkdir keys"
+        command = "mkdir -p keys"
     }
     provisioner "local-exec" {
         # TODO: only run if keys do not exist
@@ -158,7 +157,7 @@ resource "vsphere_virtual_machine" "k8snodes" {
   vapp {
     properties = {
       hostname          = "${var.k8snodes.hostname}${count.index + 1}"
-      user-data         = base64encode(templatefile("templates/k8snodes-cloud-init.yml", { username = var.k8s-global.username, public-key = data.local_file.ssh-publickey.content, iscsi-ip-addr = "[${var.k8snodes.iscsi_subnet}${var.k8snodes.iscsi_startip + count.index}/${var.k8snodes.iscsi_maskbits}]", hostname=this.name }))
+      user-data         = base64encode(templatefile("templates/k8snodes-cloud-init.yml", { username = var.k8s-global.username, public-key = data.local_file.ssh-publickey.content, iscsi-ip-addr = "[${var.k8snodes.iscsi_subnet}${var.k8snodes.iscsi_startip + count.index}/${var.k8snodes.iscsi_maskbits}]", hostname="${var.k8snodes.hostname}${count.index + 1}" }))
     }
   }
 
@@ -230,21 +229,21 @@ resource "null_resource" "kubespray" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo apt install python3-pip",
-      "pip3 install --upgrade pip",
       "curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl",
       "chmod +x kubectl",
       "sudo mv kubectl /usr/local/bin/",
+      "sudo apt-get -y install python3-pip",
+      "pip3 install --upgrade pip",
       "git clone https://github.com/kubernetes-sigs/kubespray.git",
       "cd ~/kubespray",
-      "pip install -r requirements.txt",
+      "pip3 install -r requirements.txt",
       "cp -rfp inventory/sample inventory/k8s-on-vmware",
       "echo ${join(" ", vsphere_virtual_machine.k8snodes.*.default_ip_address)} >/tmp/ips",
       "echo \"#!/bin/bash\" > ~/run-kubespray.sh",
       "echo \"cd ~/kubespray/\" >> ~/run-kubespray.sh",
       "echo \"declare -a IPS=(`cat /tmp/ips`)\" >> ~/run-kubespray.sh",
       "echo \"CONFIG_FILE=inventory/k8s-on-vmware/hosts.yml python3 contrib/inventory_builder/inventory.py \\$${IPS[@]}\" >> ~/run-kubespray.sh",
-      "echo \"ansible-playbook -i inventory/k8s-on-vmware/hosts.yml --become --become-user=root cluster.yml\" >> ~/run-kubespray.sh",
+      "echo \"~/local/bin/ansible-playbook -i inventory/k8s-on-vmware/hosts.yml --become --become-user=root cluster.yml\" >> ~/run-kubespray.sh",
       "chmod +x ~/run-kubespray.sh",
       "cd ~/",
       "~/run-kubespray.sh",
