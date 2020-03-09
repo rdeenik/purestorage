@@ -243,7 +243,7 @@ resource "null_resource" "kubespray" {
       "echo \"cd ~/kubespray/\" >> ~/run-kubespray.sh",
       "echo \"declare -a IPS=(`cat /tmp/ips`)\" >> ~/run-kubespray.sh",
       "echo \"CONFIG_FILE=inventory/k8s-on-vmware/hosts.yml python3 contrib/inventory_builder/inventory.py \\$${IPS[@]}\" >> ~/run-kubespray.sh",
-      "echo \"~/local/bin/ansible-playbook -i inventory/k8s-on-vmware/hosts.yml --become --become-user=root cluster.yml\" >> ~/run-kubespray.sh",
+      "echo \"~/.local/bin/ansible-playbook -i inventory/k8s-on-vmware/hosts.yml --become --become-user=root cluster.yml\" >> ~/run-kubespray.sh",
       "chmod +x ~/run-kubespray.sh",
       "cd ~/",
       "~/run-kubespray.sh",
