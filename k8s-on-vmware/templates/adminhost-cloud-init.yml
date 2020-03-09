@@ -15,3 +15,4 @@ packages:
   - vim
   - net-tools
   - python3-pip
+  - touch /etc/cloud/cloud-init.done

@@ -173,6 +173,24 @@ resource "vsphere_virtual_machine" "k8snodes" {
   ]
 }
 
+resource "null_resource" "cloud-init-adminhost" {
+  triggers = {
+     build_number = 2
+  }
+  
+  connection {
+    host = vsphere_virtual_machine.k8s-adminhost.default_ip_address
+    type = "ssh"
+    user = var.k8s-global.username
+    private_key = file(var.k8s-global.private_key)
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "while [ ! -f /etc/cloud/cloud-init.done ]; do sleep 2; done",
+    ]
+  }
+}
 
 # Copy private/public keys for passwordless authentication to adminhost
 resource "null_resource" "set-public-key" {
@@ -212,6 +230,7 @@ resource "null_resource" "kubespray" {
 
   provisioner "remote-exec" {
     inline = [
+      "sudo apt install python3-pip",
       "pip3 install --upgrade pip",
       "curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl",
       "chmod +x kubectl",
@@ -240,5 +259,6 @@ resource "null_resource" "kubespray" {
     vsphere_virtual_machine.k8s-adminhost,
     vsphere_virtual_machine.k8snodes,
     null_resource.set-public-key,
+    cloud-init-adminhost,
   ]
 }
