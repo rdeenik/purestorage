@@ -1,9 +1,1 @@
 .DS_Store
-*.tfvars
-*.tfstate
-*.backup
-.terraform
-todo.txt
-.terraform.tfstate.lock.info
-Do not sync/
-k8s-on-vmware/keys
