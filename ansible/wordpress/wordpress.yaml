@@ -96,7 +96,7 @@
       kubeconfig: "{{ kubeconfig_dev }}"
     register: wordpress_pvcs_dev
 
-  - name: Get wordpress volumes (dev)
+  - name: Get mariadb volumes (dev)
     k8s:
       kind: PersistentVolumeClaim
       name: "{{ mariadb_vol }}"
