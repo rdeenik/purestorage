@@ -1,0 +1,207 @@
+- name: Copy wordpress production to development environment
+  hosts: localhost
+  gather_facts: no
+  collections:
+    - purestorage.flasharray
+  vars:
+    labels: "app.kubernetes.io/name=wordpress"
+    k8s_namespace: "default"
+    wordpress_app: "wordpress"
+    mariadb_sset: "wordpress-mariadb"
+    wordpress_vol: "wordpress"
+    mariadb_vol: "data-wordpress-mariadb-0"
+    k8s_prod_ns: "remko_prod"
+    k8s_dev_ns: "remko_dev"
+    snapshot_name: "ansible"
+    pgroup: "wordpress"
+    kubeconfig_prod: "/home/user/wordpress/k8s-prod-config"
+    kubeconfig_dev: "/home/user/wordpress/k8s-dev-config"
+  tasks:
+
+  - name: Load settings
+    include_vars: credentials.yaml
+  
+  - name: Get name source array
+    purefa_info:
+      fa_url: "{{ fa_prod_url }}"
+      api_token: "{{ fa_prod_api_token }}"
+    register: array_info
+
+  - set_fact:
+      prod_array: "{{ array_info['purefa_info']['default']['array_name'] }}"
+
+  - name: Get name destination array
+    purefa_info:
+      fa_url: "{{ fa_dev_url }}"
+      api_token: "{{ fa_dev_api_token }}"
+    register: array_info
+
+  - set_fact:
+      dev_array: "{{ array_info['purefa_info']['default']['array_name'] }}"
+
+  - name: Get wordpress volumes
+    k8s:
+      kind: PersistentVolumeClaim
+      name: "{{ wordpress_vol }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_prod }}"
+    register: wordpress_pvcs
+
+  - name: Get wordpress volumes
+    k8s:
+      kind: PersistentVolumeClaim
+      name: "{{ mariadb_vol }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_prod }}"
+    register: mariadb_pvcs
+      
+  - name: Create protection group
+    purefa_pg:
+      pgroup: "{{ pgroup }}"
+      state: present
+      target: 
+        - "{{ dev_array }}"
+      volume:
+        - "{{ k8s_prod_ns + '-' + wordpress_pvcs | json_query('result.spec.volumeName') }}"
+        - "{{ k8s_prod_ns + '-' + mariadb_pvcs | json_query('result.spec.volumeName') }}"
+      enabled: false
+      fa_url: "{{ fa_prod_url }}"
+      api_token: "{{ fa_prod_api_token }}"
+
+  - name: Create snapshot for each PVC
+    purefa_pgsnap:
+      name: "{{ pgroup }}"
+      suffix: "{{ snapshot_name }}"
+      fa_url: "{{ fa_prod_url }}"
+      api_token: "{{ fa_prod_api_token }}"
+      remote: true
+      now: true
+
+  - name: Wait until PG transfer is complete
+    purefa_info:
+      gather_subset: pgroups
+      api_token: "{{ fa_dev_api_token }}"
+      fa_url: "{{ fa_dev_url }}"
+    register: array_info
+    retries: 10
+    delay: 5
+    ignore_errors: true
+    until: "array_info | json_query('purefa_info.pgroups.\"' + prod_array + ':' + pgroup +'\".snaps.\"' + prod_array + ':' + pgroup + '.' + snapshot_name+'\".progress') != 0.0"
+
+  - name: Get wordpress volumes (dev)
+    k8s:
+      kind: PersistentVolumeClaim
+      name: "{{ wordpress_vol }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_dev }}"
+    register: wordpress_pvcs_dev
+
+  - name: Get mariadb volumes (dev)
+    k8s:
+      kind: PersistentVolumeClaim
+      name: "{{ mariadb_vol }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_dev }}"
+    register: mariadb_pvcs_dev
+
+  - name: Scale down Wordpress relicas to 0
+    k8s:
+      name: "{{ wordpress_app }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_dev }}"
+      state: present
+      definition:
+        apiVersion: apps/v1
+        kind: Deployment
+        spec:
+          replicas: 0
+
+  - name: Scale down MariaDB relicas to 0
+    k8s:
+      name: "{{ mariadb_sset }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_dev }}"
+      state: present
+      definition:
+        apiVersion: apps/v1
+        kind: StatefulSet
+        spec:
+          replicas: 0
+
+  - name: Wait for containers to stop
+    k8s_info:
+      kind: pod
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_dev }}"
+    register: list_pods
+    until: "(list_pods | json_query('resources') | count) == 0"
+    retries: 20
+    delay: 5
+
+  - name: Restore wordpress volume from the snapshot
+    purefa_pgsnap:
+      name: "{{ prod_array }}:{{ pgroup }}"
+      suffix: "{{ snapshot_name }}"
+      state: copy
+      restore: "{{ k8s_prod_ns + '-' + wordpress_pvcs | json_query('result.spec.volumeName') }}"
+      overwrite: true
+      fa_url: "{{ fa_dev_url }}"
+      api_token: "{{ fa_dev_api_token }}"
+
+  - name: Restore mariadb volume from the snapshot
+    purefa_pgsnap:
+      name: "{{ prod_array }}:{{ pgroup }}"
+      suffix: "{{ snapshot_name }}"
+      state: copy
+      restore: "{{ k8s_prod_ns + '-' + mariadb_pvcs | json_query('result.spec.volumeName') }}"
+      overwrite: true
+      fa_url: "{{ fa_dev_url }}"
+      api_token: "{{ fa_dev_api_token }}"
+
+  - name: Overwrite dev with prod volume wordpress
+    purefa_volume:
+      name: "{{ k8s_prod_ns + '-' + wordpress_pvcs | json_query('result.spec.volumeName') }}"
+      target: "{{ k8s_dev_ns + '-' + wordpress_pvcs_dev | json_query('result.spec.volumeName') }}"
+      overwrite: true
+      fa_url: "{{ fa_dev_url }}"
+      api_token: "{{ fa_dev_api_token }}"
+
+  - name: Overwrite dev with prod volume mariadb
+    purefa_volume:
+      name: "{{ k8s_prod_ns + '-' + mariadb_pvcs | json_query('result.spec.volumeName') }}"
+      target: "{{ k8s_dev_ns + '-' + mariadb_pvcs_dev | json_query('result.spec.volumeName') }}"
+      overwrite: true
+      fa_url: "{{ fa_dev_url }}"
+      api_token: "{{ fa_dev_api_token }}"
+
+  - name: Scale up Wordpress relicas to 1
+    k8s:
+      name: "{{ wordpress_app }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_dev }}"
+      state: present
+      definition:
+        apiVersion: apps/v1
+        kind: Deployment
+        spec:
+          replicas: 1
+
+  - name: Scale up MariaDB relicas to 1
+    k8s:
+      name: "{{ mariadb_sset }}"
+      namespace: "{{ k8s_namespace }}"
+      kubeconfig: "{{ kubeconfig_dev }}"
+      state: present
+      definition:
+        apiVersion: apps/v1
+        kind: StatefulSet
+        spec:
+          replicas: 1
+
+  - name: Delete protection group
+    purefa_pg:
+      pgroup: "{{ pgroup }}"
+      state: absent
+      eradicate: true
+      fa_url: "{{ fa_prod_url }}"
+      api_token: "{{ fa_prod_api_token }}"
