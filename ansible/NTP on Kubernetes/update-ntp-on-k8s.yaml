@@ -1,0 +1,34 @@
+---
+- name: Get Kubernetes nodes
+  hosts: localhost
+  tasks:
+    - name: Get Kubernetes nodes
+      set_fact:
+        nodes: "{{ lookup('k8s', api_version='v1', kind='node') }}"
+    - name: Add host to inventory
+      add_host:
+        hostname: "{{ item }}"
+        groups:
+        - Nodes
+      with_list: "{{ nodes | json_query('[*].status.addresses[0].address') }}"
+
+- name: Set NTP servers
+  hosts: Nodes
+  become: true
+  tasks:
+    - name: Make sure NTP is installed
+      apt:
+        name: ntp
+        state: present
+   
+    - name: Copy NTP server configruation
+      template: src=ntp.conf dest=/etc/ntp.conf
+
+    - name: Stop NTP client
+      service: name=ntp state=stopped
+
+    - name: Sync time initialy
+      shell: ntpd -gq
+
+    - name: Make sure NTP is started up
+      service: name=ntp state=started enabled=yes
