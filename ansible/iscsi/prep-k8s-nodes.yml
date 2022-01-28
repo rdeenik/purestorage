@@ -1,0 +1,64 @@
+- name: Get Kubernetes nodes
+  gather_facts: no
+  hosts: localhost
+  tasks:
+  - name: Get Kubernetes nodes
+    set_fact:
+      nodes: "{{ lookup('k8s', api_version='v1', kind='node') }}"
+  - name: Add host to inventory
+    add_host:
+      hostname: "{{ item }}"
+      count: "{{ node_count }}" 
+      groups:
+      - Nodes
+    with_list: "{{ nodes | json_query('[*].status.addresses[0].address') }}"
+    loop_control:
+      index_var: node_count
+
+- name: Configure nodes
+  gather_facts: no
+  hosts: Nodes
+  become: true
+  vars:
+    iscsi_net: "192.168.2.0/24"
+  tasks:
+  - name: Remove file (delete file)
+    ansible.builtin.file:
+      path: /etc/sysconfig/network-scripts/ifcfg-eth224
+      state: absent
+  - name: Set iSCSI IP address
+    set_fact:
+      iscsi_ip: "{{ iscsi_net | ansible.netcommon.ipaddr('net') | ansible.netcommon.ipaddr(play_hosts.index(inventory_hostname) + 130) }}"
+  - name: Add an Ethernet connection with static IP configuration
+    community.general.nmcli:
+      conn_name: ens224
+      ifname: ens224
+      type: ethernet
+      ip4: "{{ iscsi_ip }}"
+      state: present
+  - name: Restart Network to take effect new IP Address
+    service:
+      name: network
+      state: restarted
+  - name: Install required software
+    yum:
+      name: "{{ packages }}" 
+      state: latest
+    vars:
+      packages:
+        - iscsi-initiator-utils
+        - device-mapper-multipath
+        - device-mapper-multipath-libs
+  - name: Restart iscsi service
+    ansible.builtin.service:
+      name: iscsi
+      state: restarted
+      enabled: yes
+  - name: Enable multipathconfig 
+    ansible.builtin.shell:
+      cmd: mpathconf --enable --with_multipathd y
+  - name: Restart iscsi service
+    ansible.builtin.service:
+      name: multipathd
+      state: restarted
+      enabled: yes
